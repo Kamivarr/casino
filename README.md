@@ -1,1 +1,1 @@
-# casino
+# Witamy w kasyno online!
