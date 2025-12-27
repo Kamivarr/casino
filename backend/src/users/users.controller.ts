@@ -8,15 +8,10 @@ import { CreateUserDto } from './dto/create-user.dto';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  // Lista użytkowników
   @Get()
-  @ApiOperation({ summary: 'Lista użytkowników' })
-  findAll() {
+  @ApiOperation({ summary: 'Lista wszystkich użytkowników (bez haseł)' })
+  async findAll() {
     return this.usersService.findAll();
-  }
-
-  @Post()
-  @ApiOperation({ summary: 'Dodaj użytkownika' })
-  create(@Body() data: CreateUserDto) {
-    return this.usersService.create(data);
   }
 }
