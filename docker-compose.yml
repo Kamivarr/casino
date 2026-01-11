@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 1. Baza danych
   db:
@@ -18,8 +16,8 @@ services:
   # 2. Backend API
   backend:
     build: ./backend
-    image: casino-backend-v2
-    container_name: casino-backend-v2
+    image: casino-backend
+    container_name: casino-backend
     restart: always
     ports:
       - "3000:3000"
@@ -41,6 +39,18 @@ services:
       - REACT_APP_API_URL=http://localhost:3000
     depends_on:
       - backend
+
+  # 4. Prisma Studio
+  prisma-studio:
+    build: ./backend
+    container_name: casino-prisma-studio
+    command: npx prisma studio --hostname 0.0.0.0
+    ports:
+      - "5555:5555"
+    environment:
+      DATABASE_URL: "postgresql://postgres:password123@db:5432/casino_db?schema=public"
+    depends_on:
+      - db
 
 volumes:
   postgres_data:
