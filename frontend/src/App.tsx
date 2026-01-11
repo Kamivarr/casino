@@ -1,13 +1,18 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import AuthPage from './pages/AuthPage';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Login from './components/Login';
+import Register from './components/Register';
+import Welcome from './components/Welcome';
 
-export default function App() {
+function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="*" element={<Navigate to="/auth" />} />
+        <Route path="/" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/welcome" element={<Welcome />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
+
+export default App;

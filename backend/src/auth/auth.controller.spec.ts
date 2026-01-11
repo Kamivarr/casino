@@ -1,18 +1,27 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuthController } from './auth.controller';
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { CreateUserDto } from '../users/dto/create-user.dto';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
-describe('AuthController', () => {
-  let controller: AuthController;
+@ApiTags('auth') // Grupowanie w Swaggerze
+@Controller('auth')
+export class AuthController {
+  constructor(private authService: AuthService) {}
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [AuthController],
-    }).compile();
+  @Post('register')
+  @ApiOperation({ summary: 'Rejestracja nowego użytkownika' })
+  @ApiResponse({ status: 201, description: 'Użytkownik został utworzony.' })
+  @ApiResponse({ status: 409, description: 'Email lub username zajęty.' })
+  async register(@Body() dto: CreateUserDto) {
+    return this.authService.register(dto);
+  }
 
-    controller = module.get<AuthController>(AuthController);
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-});
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Logowanie użytkownika' })
+  @ApiResponse({ status: 200, description: 'Zwraca token JWT.' })
+  @ApiResponse({ status: 401, description: 'Błędne dane logowania.' })
+  async login(@Body() body: any) {
+    return this.authService.login(body.email, body.password);
+  }
+}

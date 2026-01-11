@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -11,36 +11,41 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async login(email: string, password: string) {
-    const user = await this.usersService.findByEmail(email);
-
-    if (!user) {
-      throw new UnauthorizedException('Niepoprawny email lub hasło');
-    }
-
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) {
-      throw new UnauthorizedException('Niepoprawny email lub hasło');
-    }
-
-    const payload = { sub: user.id, email: user.email };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
-  }
-
   async register(dto: CreateUserDto) {
-    const existingUser = await this.usersService.findByEmail(dto.email);
-    if (existingUser) {
-      throw new UnauthorizedException('Użytkownik o tym emailu już istnieje');
-    }
+    // 1. Sprawdź czy email lub username są zajęte
+    const userByEmail = await this.usersService.findByEmail(dto.email);
+    if (userByEmail) throw new ConflictException('Email jest już zajęty');
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const userByUsername = await this.usersService.findByUsername(dto.username);
+    if (userByUsername) throw new ConflictException('Username jest już zajęty');
+
+    // 2. Hashowanie hasła
+    const salt = await bcrypt.genSalt();
+    const passwordHash = await bcrypt.hash(dto.password, salt);
+
+    // 3. Zapis do bazy
     const user = await this.usersService.create({
-      ...dto,
-      password: hashedPassword,
+      username: dto.username,
+      email: dto.email,
+      passwordHash: passwordHash,
+      balance: 1000.0, // Bonus na start
     });
 
+    // Usuwamy hash z odpowiedzi dla bezpieczeństwa
+    delete (user as any).passwordHash;
     return user;
+  }
+
+  async login(email: string, pass: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new UnauthorizedException('Błędne dane logowania');
+
+    const isMatch = await bcrypt.compare(pass, user.passwordHash);
+    if (!isMatch) throw new UnauthorizedException('Błędne dane logowania');
+
+    const payload = { sub: user.id, username: user.username };
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+    };
   }
 }
