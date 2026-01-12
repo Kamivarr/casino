@@ -10,6 +10,7 @@ const rarityColors: { [key: string]: string } = {
 
 const Inventory = ({ userId }: { userId: number }) => {
   const [items, setItems] = useState<any[]>([]);
+  const [sellPrice, setSellPrice] = useState<{ [key: number]: string }>({});
 
   const fetchInventory = async () => {
     try {
@@ -22,10 +23,26 @@ const Inventory = ({ userId }: { userId: number }) => {
 
   useEffect(() => {
     if (userId) fetchInventory();
-    // Odświeżaj co 5 sekund, aby widzieć nowe dropy bez przeładowania
     const interval = setInterval(fetchInventory, 5000);
     return () => clearInterval(interval);
   }, [userId]);
+
+  const handleSell = async (inventoryItemId: number) => {
+    const price = parseFloat(sellPrice[inventoryItemId]);
+    if (!price || price <= 0) return alert("Podaj prawidłową cenę!");
+
+    try {
+      await api.post('/users/market/sell', {
+        userId,
+        inventoryItemId,
+        price
+      });
+      alert("Wystawiono na rynek!");
+      fetchInventory();
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Błąd wystawiania");
+    }
+  };
 
   if (items.length === 0) return null;
 
@@ -36,7 +53,8 @@ const Inventory = ({ userId }: { userId: number }) => {
         {items.map((entry: any) => (
           <div key={entry.id} style={{ 
             ...styles.itemCard, 
-            borderColor: rarityColors[entry.item.rarity] || '#333' 
+            borderColor: rarityColors[entry.item.rarity] || '#333',
+            opacity: entry.listing ? 0.5 : 1
           }}>
             <div style={{ 
               ...styles.rarityTag, 
@@ -45,7 +63,28 @@ const Inventory = ({ userId }: { userId: number }) => {
               {entry.item.rarity.toUpperCase()}
             </div>
             <p style={styles.itemName}>{entry.item.name}</p>
-            <p style={styles.itemPrice}>{entry.item.price.toFixed(2)} $</p>
+            
+            {entry.listing ? (
+              <p style={{ color: '#e67e22', fontWeight: 'bold' }}>
+                Wystawiono za: {entry.listing.price} $
+              </p>
+            ) : (
+              <div style={{ marginTop: '10px' }}>
+                <input 
+                  type="number" 
+                  placeholder="Cena $" 
+                  style={styles.input}
+                  value={sellPrice[entry.id] || ''}
+                  onChange={(e) => setSellPrice({...sellPrice, [entry.id]: e.target.value})}
+                />
+                <button 
+                  onClick={() => handleSell(entry.id)}
+                  style={styles.sellBtn}
+                >
+                  Wystaw
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -56,7 +95,7 @@ const Inventory = ({ userId }: { userId: number }) => {
 const styles = {
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
     gap: '15px',
   },
   itemCard: {
@@ -81,10 +120,23 @@ const styles = {
     fontSize: '14px',
     margin: '5px 0',
   },
-  itemPrice: {
-    color: '#666',
-    fontSize: '12px',
-    margin: 0,
+  input: {
+    width: '60%',
+    padding: '5px',
+    borderRadius: '4px',
+    border: '1px solid #444',
+    backgroundColor: '#333',
+    color: 'white',
+    marginRight: '5px'
+  },
+  sellBtn: {
+    padding: '5px 10px',
+    backgroundColor: '#e67e22',
+    border: 'none',
+    borderRadius: '4px',
+    color: 'white',
+    cursor: 'pointer',
+    fontSize: '12px'
   }
 };
 

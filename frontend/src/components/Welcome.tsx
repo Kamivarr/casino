@@ -3,32 +3,73 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axios'; 
 import Cases from './Cases'; 
 import Inventory from './Inventory'; 
+import { jwtDecode } from 'jwt-decode';
 
 const Welcome = () => {
   const [user, setUser] = useState<any>(null);
+  const [marketListings, setMarketListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inventoryKey, setInventoryKey] = useState(0); // Klucz do wymuszania odświeżenia ekwipunku
+  const [inventoryKey, setInventoryKey] = useState(0); 
   const navigate = useNavigate();
 
-  const fetchUserData = async () => {
+const fetchUserData = async () => {
     try {
-      const response = await api.get('/users/1'); 
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/'); // Powrót do logowania, jeśli brak tokena
+        return;
+      }
+
+      // Dekodujemy token, aby wyciągnąć z niego sub (ID użytkownika)
+      const decoded: any = jwtDecode(token);
+      const userId = decoded.sub || decoded.id; // Zależy jak Twój backend nazywa pole ID w tokenie
+
+      // Teraz używamy dynamicznego userId zamiast "1"
+      const response = await api.get(`/users/${userId}`); 
       setUser(response.data);
     } catch (error) {
-      console.error("Błąd pobierania danych:", error);
+      console.error("Błąd pobierania danych użytkownika:", error);
+      navigate('/');
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchMarket = async () => {
+    try {
+      const res = await api.get('/users/market');
+      setMarketListings(res.data);
+    } catch (err) {
+      console.error("Błąd pobierania rynku");
+    }
+  };
+
   useEffect(() => {
     fetchUserData();
+    fetchMarket();
+    // Odświeżanie rynku co 5s
+    const interval = setInterval(fetchMarket, 5000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Funkcja wywoływana po otwarciu skrzynki
   const handleCaseOpened = () => {
-    fetchUserData(); // Odśwież balans [cite: 5]
-    setInventoryKey(prev => prev + 1); // Zwiększ klucz, by Inventory pobrało dane 
+    fetchUserData(); 
+    setInventoryKey(prev => prev + 1); 
+  };
+
+  const handleBuy = async (listingId: number, price: number) => {
+    if (!user) return;
+    if (user.balance < price) return alert("Za mało środków!");
+
+    try {
+      await api.post(`/users/market/buy/${listingId}`, { buyerId: user.id });
+      alert("Kupiono przedmiot!");
+      fetchUserData(); // Odśwież balans
+      fetchMarket();   // Odśwież rynek
+      setInventoryKey(prev => prev + 1); // Odśwież ekwipunek (nowy przedmiot)
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Błąd zakupu");
+    }
   };
 
   const handleAddFunds = async () => {
@@ -79,8 +120,34 @@ const Welcome = () => {
           {user && (
             <Cases 
               userId={user.id} 
-              onUpdate={handleCaseOpened} // Przekazujemy nową funkcję odświeżającą oba stany
+              onUpdate={handleCaseOpened} 
             />
+          )}
+
+          <div style={styles.divider}></div>
+
+          {/* SEKCJA RYNKU */}
+          <h3 style={styles.sectionTitle}>Rynek Graczy 🛒</h3>
+          {marketListings.length === 0 ? (
+            <p style={{color: '#666'}}>Brak ofert na rynku.</p>
+          ) : (
+            <div style={styles.marketGrid}>
+              {marketListings.map((listing: any) => (
+                <div key={listing.id} style={styles.marketCard}>
+                  <p style={{color: '#fff', fontWeight: 'bold'}}>{listing.inventoryItem.item.name}</p>
+                  <p style={{color: '#aaa', fontSize: '12px'}}>Sprzedawca: {listing.seller.username}</p>
+                  <p style={{color: '#2ecc71', fontSize: '18px', fontWeight: 'bold'}}>{listing.price} $</p>
+                  {listing.sellerId !== user?.id && (
+                    <button 
+                      onClick={() => handleBuy(listing.id, listing.price)}
+                      style={styles.buyBtn}
+                    >
+                      KUP TERAZ
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
 
           <div style={styles.divider}></div>
@@ -88,7 +155,7 @@ const Welcome = () => {
           {user && (
             <Inventory 
               userId={user.id} 
-              key={inventoryKey} // Zmiana tego klucza wymusi na React przeładowanie komponentu
+              key={inventoryKey} 
             />
           )}
         </main>
@@ -216,6 +283,30 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '14px',
     transition: 'all 0.3s',
   },
+  // Style dla Rynku
+  marketGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+    gap: '15px',
+    marginBottom: '30px',
+  },
+  marketCard: {
+    backgroundColor: '#252525',
+    padding: '15px',
+    borderRadius: '10px',
+    border: '1px solid #444',
+    textAlign: 'center' as const,
+  },
+  buyBtn: {
+    marginTop: '10px',
+    padding: '8px 16px',
+    backgroundColor: '#3498db',
+    border: 'none',
+    borderRadius: '5px',
+    color: 'white',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+  }
 };
 
 export default Welcome;

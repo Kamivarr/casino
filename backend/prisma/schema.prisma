@@ -16,15 +16,55 @@ model User {
   balance      Float           @default(100.0)
   createdAt    DateTime        @default(now())
   bets         Bet[]
-  inventory    InventoryItem[] // Relacja do ekwipunku 
+  inventory    InventoryItem[]
+  listings     MarketListing[]
+
+  @@map("users")
 }
 
+model Item {
+  id        Int             @id @default(autoincrement())
+  name      String
+  price     Float
+  rarity    String          
+  image     String?
+  cases     Case[]          @relation("CaseItems")
+  inventory InventoryItem[]
+
+  @@map("items")
+}
+
+model Case {
+  id        Int      @id @default(autoincrement())
+  name      String
+  price     Float
+  image     String?
+  items     Item[]   @relation("CaseItems")
+
+  @@map("cases")
+}
+
+model InventoryItem {
+  id        Int            @id @default(autoincrement())
+  userId    Int
+  itemId    Int
+  createdAt DateTime       @default(now())
+  user      User           @relation(fields: [userId], references: [id])
+  item      Item           @relation(fields: [itemId], references: [id])
+  listing   MarketListing?
+
+  @@map("inventory_items")
+}
+
+// Pozostałe modele również powinny mieć małe litery w mapowaniu
 model Game {
   id        Int      @id @default(autoincrement())
   name      String
   type      String
   createdAt DateTime @default(now())
   bets      Bet[]
+
+  @@map("games")
 }
 
 model Bet {
@@ -36,31 +76,18 @@ model Bet {
   gameId    Int
   user      User     @relation(fields: [userId], references: [id])
   game      Game     @relation(fields: [gameId], references: [id])
+
+  @@map("bets")
 }
 
-model Item {
-  id        Int             @id @default(autoincrement())
-  name      String
-  price     Float
-  rarity    String          // np: "common", "rare", "epic", "legendary"
-  image     String?         // URL do obrazka
-  cases     Case[]          @relation("CaseItems")
-  inventory InventoryItem[] // Relacja do wystąpień w ekwipunku [cite: 1, 4]
-}
+model MarketListing {
+  id              Int           @id @default(autoincrement())
+  sellerId        Int
+  inventoryItemId Int           @unique
+  price           Float
+  createdAt       DateTime      @default(now())
+  seller          User          @relation(fields: [sellerId], references: [id])
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
 
-model Case {
-  id        Int      @id @default(autoincrement())
-  name      String
-  price     Float
-  image     String?
-  items     Item[]   @relation("CaseItems")
-}
-
-model InventoryItem {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  itemId    Int
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
-  item      Item     @relation(fields: [itemId], references: [id])
+  @@map("market_listings")
 }
