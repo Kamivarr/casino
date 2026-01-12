@@ -8,6 +8,11 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password123
       POSTGRES_DB: casino_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d casino_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     ports:
       - "5433:5432"
     volumes:
@@ -26,7 +31,9 @@ services:
       DATABASE_URL: "postgresql://postgres:password123@db:5432/casino_db?schema=public"
       JWT_SECRET: "TwojeBardzoTajneHaslo123"
     depends_on:
-      - db
+      db:
+          condition: service_healthy
+    entrypoint: /app/entrypoint.sh
 
   # 3. Frontend React
   frontend:

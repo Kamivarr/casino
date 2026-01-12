@@ -18,6 +18,9 @@ COPY . .
 # Generujemy klienta Prisma dopasowanego do Alpine
 RUN npx prisma generate
 
+COPY entrypoint.sh ./
+RUN chmod +x entrypoint.sh
+
 # Budujemy projekt
 RUN npm run build
 

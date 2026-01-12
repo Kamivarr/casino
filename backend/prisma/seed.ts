@@ -1,11 +1,12 @@
-import { PrismaClient, Item } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Rozpoczynam rozbudowane seedowanie danych...');
+  console.log('🚀 Automatyczne seedowanie bazy danych...');
 
-  // 1. Definicja dużej bazy przedmiotów
+  // 1. Definicja danych
   const itemsData = [
     { name: 'AWP | Dragon Lore', price: 2500.0, rarity: 'legendary' },
     { name: 'M9 Bayonet | Doppler', price: 1200.0, rarity: 'legendary' },
@@ -29,35 +30,30 @@ async function main() {
     { name: 'M4A4 | Desolate Space', price: 35.0, rarity: 'rare' },
   ];
 
-  // KLUCZOWA POPRAWKA: Jawne określenie typu tablicy jako Item[]
-  const createdItems: Item[] = [];
+  // 2. Używamy transakcji, aby mieć pewność, że dane są spójne
+  // Najpierw czyścimy stare skrzynki i przedmioty (tylko przy automatyzacji deweloperskiej)
+  // Jeśli wolisz zachować dane, użyj pętli z upsert.
+  await prisma.marketListing.deleteMany({});
+  await prisma.inventoryItem.deleteMany({});
+  await prisma.case.deleteMany({});
+  await prisma.item.deleteMany({});
 
-  for (const item of itemsData) {
-    const created = await prisma.item.create({ data: item });
-    createdItems.push(created);
-  }
+  console.log('♻️ Stara baza wyczyszczona.');
 
-  // 2. Definicja skrzynek z filtrowaniem rzadkości
+  // 3. Tworzenie przedmiotów
+  // mapujemy stworzone obiekty do tablicy, aby użyć ich w skrzynkach
+  const createdItems = await Promise.all(
+    itemsData.map((item) => prisma.item.create({ data: item }))
+  );
+
+  // 4. Definicja skrzynek
   const casesData = [
-    {
-      name: 'Skrzynia Legend',
-      price: 150.0,
-      rarities: ['legendary', 'epic']
-    },
-    {
-      name: 'Skrzynia Klasyczna',
-      price: 25.0,
-      rarities: ['rare', 'epic', 'common']
-    },
-    {
-      name: 'Tania Paczka',
-      price: 2.0,
-      rarities: ['common']
-    }
+    { name: 'Skrzynia Legend', price: 150.0, rarities: ['legendary', 'epic'] },
+    { name: 'Skrzynia Klasyczna', price: 25.0, rarities: ['rare', 'epic', 'common'] },
+    { name: 'Tania Paczka', price: 2.0, rarities: ['common'] }
   ];
 
   for (const caseInfo of casesData) {
-    // Filtrowanie stworzonych przedmiotów według rzadkości dla konkretnej skrzynki
     const filteredItems = createdItems.filter(i => caseInfo.rarities.includes(i.rarity));
     
     await prisma.case.create({
@@ -71,25 +67,29 @@ async function main() {
     });
   }
 
-  // 3. Dodanie testowego użytkownika (opcjonalnie, by mieć na czym testować od razu)
+// 5. Hashowanie hasła dla użytkownika testowego
+  // Generujemy hash, który system rozpozna podczas logowania
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash('adminadmin', salt); 
+
+  // 6. Upsert użytkownika z poprawnym hashem
   await prisma.user.upsert({
     where: { email: 'admin@casino.pl' },
-    update: {},
+    update: {}, 
     create: {
-      id: 1,
       username: 'Administrator',
       email: 'admin@casino.pl',
-      passwordHash: 'test', // W prawdziwej apce użyj bcrypt
-      balance: 1000.0
-    }
+      passwordHash: hashedPassword, // Wstawiamy bezpieczny hash zamiast "test" 
+      balance: 1000.0,
+    },
   });
 
-  console.log(`Seedowanie zakończone! Stworzono ${createdItems.length} przedmiotów.`);
+  console.log(`✅ Seedowanie zakończone! Przedmioty: ${createdItems.length}`);
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('❌ Błąd seedowania:', e);
     process.exit(1);
   })
   .finally(async () => {
