@@ -119,6 +119,27 @@ export class UsersService {
       orderBy: { createdAt: 'desc' },
     });
   }
+  async cancelListing(userId: number, listingId: number) {
+  // 1. Znajdź ofertę
+  const listing = await this.prisma.marketListing.findUnique({
+    where: { id: listingId },
+    include: { inventoryItem: true }
+  });
+
+  if (!listing) {
+    throw new Error('Oferta nie istnieje.');
+  }
+
+  // 2. Prosta walidacja: czy użytkownik jest właścicielem przedmiotu
+  if (listing.inventoryItem.userId !== userId) {
+    throw new Error('To nie jest Twój przedmiot!');
+  }
+
+  // 3. Usuń wpis rynkowy
+  return this.prisma.marketListing.delete({
+    where: { id: listingId }
+  });
+}
 
   /**
    * Obsługuje proces zakupu przedmiotu przy użyciu transakcji bazodanowej.

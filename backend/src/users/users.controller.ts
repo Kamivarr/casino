@@ -46,11 +46,17 @@ export class UsersController {
   getInventory(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.getInventory(id);
   }
-
-  @Post(':id/add-funds')
-  @ApiOperation({ summary: 'Doładowuje konto użytkownika (Funkcja deweloperska/Testowa)' })
-  addFunds(@Param('id', ParseIntPipe) id: number) {
-    // Wartości stałe (100) najlepiej trzymać w serwisie lub konfigurować w DTO
+  @Post('market/cancel/:id')
+  @ApiOperation({ summary: 'Anuluje wystawienie przedmiotu na rynku' })
+  cancelListing(
+    @Param('id', ParseIntPipe) listingId: number,
+    @Body() body: { userId: number } // Przesyłamy userId w body zamiast z tokena
+  ) {
+    return this.usersService.cancelListing(body.userId, listingId);
+  }
+  @Post(':id/bonus')
+  @ApiOperation({ summary: 'Odbierz bonus (100 kredytów)' })
+  claimBonus(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.addCredits(id, 100);
   }
 }
