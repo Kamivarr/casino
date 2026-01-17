@@ -1,27 +1,52 @@
-# CS:GO Casino Platform - Web Project
+# CS:GO Case Opener & Marketplace
 
-Profesjonalna platforma typu "Case Opener" oparta na architekturze mikroserwisowej (konteneryzacja Docker), zbudowana z użyciem nowoczesnych technologii webowych. Projekt umożliwia otwieranie skrzynek z animacją karuzeli, zarządzanie ekwipunkiem oraz handel na wewnętrznym rynku (Marketplace).
+Projekt zaliczeniowy symulujący ekosystem pozyskiwania i handlu wirtualnymi przedmiotami (skinami). Aplikacja umożliwia otwieranie skrzynek, zarządzanie ekwipunkiem oraz handel z innymi użytkownikami w czasie rzeczywistym.
 
-## 🚀 Technologie
+## 1. Wprowadzenie
+**Cel aplikacji:** Stworzenie platformy webowej odwzorowującej mechaniki znane z gier typu FPS, pozwalającej użytkownikom na symulację ekonomii wirtualnej bez ryzyka finansowego.
 
-### Backend:
-* **NestJS** - Framework Node.js do budowy skalowalnych aplikacji serwerowych.
-* **Prisma ORM** - Nowoczesne mapowanie obiektowo-relacyjne dla bazy danych.
-* **PostgreSQL** - Relacyjna baza danych.
-* **Swagger** - Automatyczna dokumentacja API.
+**Kluczowe możliwości:**
+* Otwieranie skrzynek z animacją losowania (CSS `cubic-bezier`).
+* Handel przedmiotami na rynku (kupno/sprzedaż).
+* Zarządzanie wirtualnym portfelem i ekwipunkiem.
 
-### Frontend:
-* **React** - Biblioteka do budowy interfejsu użytkownika.
-* **Axios** - Klient HTTP do komunikacji z API.
-* **CSS3 Animations** - Zaawansowana logika karuzeli oparta na `cubic-bezier`.
+## 2. Wykorzystane technologie
+* **Backend:** NestJS, TypeScript, Prisma ORM.
+* **Frontend:** React, Vite, TypeScript, Material UI.
+* **Baza danych:** PostgreSQL.
+* **Infrastruktura:** Docker, Docker Compose.
 
----
+## 3. Instalacja i uruchomienie
+Wymagania wstępne: Zainstalowany **Docker** oraz **Docker Compose**.
 
-## 🛠 Instrukcja uruchomienia
+### Instrukcja "One-Click Setup":
+Projekt jest w pełni skonteneryzowany. Aby go uruchomić, wykonaj następujące kroki:
 
-Aby uruchomić projekt, upewnij się, że masz zainstalowany **Docker** oraz **Docker Compose**.
+1.  Sklonuj repozytorium:
+    ```bash
+    git clone [https://github.com/Kamivarr/casino.git](https://github.com/Kamivarr/casino.git)
+    cd casino
+    ```
+2.  Uruchom środowisko:
+    ```bash
+    docker-compose up --build
+    ```
+3.  **Gotowe!** Aplikacja automatycznie skonfiguruje bazę danych i wypełni ją danymi testowymi (seed).
 
-### 1. Budowa i start kontenerów
-W folderze głównym projektu wykonaj komendę:
-```bash
-docker-compose up -d --build
+Dostęp do usług:
+* **Frontend:** http://localhost:5173
+* **Backend API:** http://localhost:3000
+* **Swagger Docs:** http://localhost:3000/api
+
+## 4. Funkcje aplikacji
+* **System Losowania:** Interaktywna karuzela losująca przedmioty z różnym stopniem rzadkości.
+* **Marketplace:** Pełny system handlu. Użytkownik może wystawić przedmiot na sprzedaż, a inny go kupić. Operacje są zabezpieczone transakcjami ACID.
+* **Bezpieczeństwo:** Rejestracja i logowanie z użyciem JWT oraz hashowaniem haseł (bcrypt).
+* **Ekwipunek:** Podgląd zdobytych przedmiotów, ich wartości i statusu (w ekwipunku / na rynku).
+
+## 5. Struktura i Konfiguracja
+Model danych oparty jest na relacjach PostgreSQL. Główne encje to `User`, `Item`, `Case` oraz `MarketListing`.
+Konfiguracja zmiennych środowiskowych znajduje się w pliku `.env` wewnątrz kontenerów (zarządzana przez docker-compose).
+
+## 6. Wdrożenie
+Aplikacja jest przygotowana do pracy w kontenerach, co czyni ją niezależną od systemu operacyjnego hosta. Mechanizm **Healthcheck** zapewnia, że backend startuje dopiero po pełnym uruchomieniu bazy danych.
